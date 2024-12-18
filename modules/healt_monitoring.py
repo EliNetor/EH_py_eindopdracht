@@ -2,50 +2,51 @@ import psutil
 import time
 from datetime import datetime
 import os
-import uuid
 
-# Functie om CPU-gebruik te meten
+# Function to get CPU usage
 def get_cpu_usage():
     return psutil.cpu_percent(interval=1)
 
-# Functie om RAM-gebruik te meten
+# Function to get RAM usage
 def get_ram_usage():
     mem = psutil.virtual_memory()
     return mem.percent, mem.used, mem.total
 
-# Functie om netwerkactiviteit te meten
-def get_network_activity():
-    net_io = psutil.net_io_counters()
-    return net_io.bytes_sent, net_io.bytes_recv
+# Function to get network activity for a specific IP address
+def get_network_activity(target_ip):
+    net_io = psutil.net_if_addrs()
+    net_counters = psutil.net_io_counters(pernic=True)
 
-# Functie om de MAC-adres te krijgen
-def get_mac_address():
-    mac = hex(uuid.getnode()).replace('0x', '').upper()
-    return ':'.join(mac[i:i + 2] for i in range(0, len(mac), 2))
+    for interface, addresses in net_io.items():
+        for addr in addresses:
+            if addr.address == target_ip:
+                if interface in net_counters:
+                    stats = net_counters[interface]
+                    return stats.bytes_sent, stats.bytes_recv
 
-# Functie om logbestand te schrijven
-def log_health_metrics():
-    # Zorg ervoor dat de map 'logs' bestaat
+    return 0, 0  # Return 0 if the target IP is not found
+
+# Function to log health metrics
+def log_health_metrics(target_ip):
+    # Create logs directory if it does not exist
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
-    
-    # Haal MAC-adres op en gebruik het als bestandsnaam
-    mac_address = get_mac_address().replace(":", "-")  # Vervang ':' met '-' om compatibiliteit te waarborgen
-    log_file = os.path.join(log_dir, f"{mac_address}.log")
-    
+
+    # Use the target IP as the filename
+    log_file = os.path.join(log_dir, f"{target_ip}.log")
+
     while True:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Haal CPU-gebruik
+        # Get CPU usage
         cpu_usage = get_cpu_usage()
 
-        # Haal RAM-gebruik
+        # Get RAM usage
         ram_percent, ram_used, ram_total = get_ram_usage()
 
-        # Haal netwerkactiviteit
-        bytes_sent, bytes_recv = get_network_activity()
+        # Get network activity for the target IP
+        bytes_sent, bytes_recv = get_network_activity(target_ip)
 
-        # Formatteer rapport
         log_entry = (
             "=================================\n"
             f"Timestamp       : {timestamp}\n"
@@ -56,12 +57,13 @@ def log_health_metrics():
             "=================================\n"
         )
 
-        # Schrijf naar logbestand
+        # Write to file
         with open(log_file, "a") as file:
             file.write(log_entry)
 
-        # Wacht 5 seconden voordat het opnieuw meet
+        # Scan interval
         time.sleep(5)
 
 if __name__ == "__main__":
-    log_health_metrics()
+    target_ip = input("Enter the target IP address: ")
+    log_health_metrics(target_ip)
