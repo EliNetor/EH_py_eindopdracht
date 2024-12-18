@@ -2,6 +2,7 @@ import psutil
 import time
 from datetime import datetime
 import os
+import uuid
 
 # Functie om CPU-gebruik te meten
 def get_cpu_usage():
@@ -17,12 +18,20 @@ def get_network_activity():
     net_io = psutil.net_io_counters()
     return net_io.bytes_sent, net_io.bytes_recv
 
+# Functie om de MAC-adres te krijgen
+def get_mac_address():
+    mac = hex(uuid.getnode()).replace('0x', '').upper()
+    return ':'.join(mac[i:i + 2] for i in range(0, len(mac), 2))
+
 # Functie om logbestand te schrijven
 def log_health_metrics():
     # Zorg ervoor dat de map 'logs' bestaat
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, "health_metrics.log")
+    
+    # Haal MAC-adres op en gebruik het als bestandsnaam
+    mac_address = get_mac_address().replace(":", "-")  # Vervang ':' met '-' om compatibiliteit te waarborgen
+    log_file = os.path.join(log_dir, f"{mac_address}.log")
     
     while True:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
