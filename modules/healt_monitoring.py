@@ -1,69 +1,94 @@
-import psutil
+import paramiko
 import time
 from datetime import datetime
 import os
 
-# Function to get CPU usage
-def get_cpu_usage():
-    return psutil.cpu_percent(interval=1)
+def execute_ssh_command(ssh_client, command):
+    stdin, stdout, stderr = ssh_client.exec_command(command)
+    return stdout.read().decode().strip(), stderr.read().decode().strip()
 
-# Function to get RAM usage
-def get_ram_usage():
-    mem = psutil.virtual_memory()
-    return mem.percent, mem.used, mem.total
-
-# Function to get network activity for a specific IP address
-def get_network_activity(target_ip):
-    net_io = psutil.net_if_addrs()
-    net_counters = psutil.net_io_counters(pernic=True)
-
-    for interface, addresses in net_io.items():
-        for addr in addresses:
-            if addr.address == target_ip:
-                if interface in net_counters:
-                    stats = net_counters[interface]
-                    return stats.bytes_sent, stats.bytes_recv
-
-    return 0, 0  # Return 0 if the target IP is not found
-
-# Function to log health metrics
-def log_health_metrics(target_ip):
-    # Create logs directory if it does not exist
+def log_health_metrics(target_ip, ssh_client):
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
 
-    # Use the target IP as the filename
     log_file = os.path.join(log_dir, f"{target_ip}.log")
 
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cpu_usage_cmd = "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\([0-9.]*\)%* id.*/\1/' | awk '{print 100 - $1}'"
+    cpu_usage, _ = execute_ssh_command(ssh_client, cpu_usage_cmd)
+
+    ram_usage_cmd = (
+        "free -m | awk 'NR==2{printf \"%s %s %s\", $3, $2, $3*100/$2 }'"
+    )
+    ram_data, _ = execute_ssh_command(ssh_client, ram_usage_cmd)
+    ram_used, ram_total, ram_percent = ram_data.split()
+
+    network_activity_cmd = (
+        "cat /proc/net/dev | tail -n +3 | awk '{print $1, $2, $10}'"
+    )
+    network_data, _ = execute_ssh_command(ssh_client, network_activity_cmd)
+    bytes_sent = 0
+    bytes_recv = 0
+    for line in network_data.splitlines():
+        parts = line.split()
+        if len(parts) >= 3:
+            bytes_recv += int(parts[1])
+            bytes_sent += int(parts[2])
+
+    log_entry = (
+        "=================================\n"
+        f"Timestamp       : {timestamp}\n"
+        f"CPU Usage       : {cpu_usage}%\n"
+        f"RAM Usage       : {ram_percent}% ({int(ram_used)} MB / {int(ram_total)} MB)\n"
+        f"Network Sent    : {bytes_sent / (1024**2):.2f} MB\n"
+        f"Network Received: {bytes_recv / (1024**2):.2f} MB\n"
+        "=================================\n"
+    )
+
+    with open(log_file, "a") as file:
+        file.write(log_entry)
+
+    print(f"Metrics for IP {target_ip}:")
+    print(log_entry)
+
+def main():
+    input_file = "ip_addresses.txt"
+    if not os.path.exists(input_file):
+        print(f"Error: {input_file} not found.")
+        return
+
+    with open(input_file, "r") as file:
+        ip_addresses = [line.strip() for line in file if line.strip()]
+
+    if not ip_addresses:
+        print("No IP addresses found in the file.")
+        return
+
+    ssh_username = "ubuntu"  
+
     while True:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for ip in ip_addresses:
+            try:
+                print(f"Connecting to {ip}...")
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh_client.connect(hostname=ip, username=ssh_username)
 
-        # Get CPU usage
-        cpu_usage = get_cpu_usage()
+                print(f"Starting metrics logging for IP: {ip}")
+                log_health_metrics(ip, ssh_client)
+                print(f"Finished metrics logging for IP: {ip}")
 
-        # Get RAM usage
-        ram_percent, ram_used, ram_total = get_ram_usage()
+                ssh_client.close()
 
-        # Get network activity for the target IP
-        bytes_sent, bytes_recv = get_network_activity(target_ip)
+            except Exception as e:
+                print(f"Error connecting to {ip}: {e}")
 
-        log_entry = (
-            "=================================\n"
-            f"Timestamp       : {timestamp}\n"
-            f"CPU Usage       : {cpu_usage}%\n"
-            f"RAM Usage       : {ram_percent}% ({ram_used / (1024**2):.2f} MB / {ram_total / (1024**2):.2f} MB)\n"
-            f"Network Sent    : {bytes_sent / (1024**2):.2f} MB\n"
-            f"Network Received: {bytes_recv / (1024**2):.2f} MB\n"
-            "=================================\n"
-        )
-
-        # Write to file
-        with open(log_file, "a") as file:
-            file.write(log_entry)
-
-        # Scan interval
-        time.sleep(5)
+            
+            time.sleep(5)  
 
 if __name__ == "__main__":
-    target_ip = input("Enter the target IP address: ")
-    log_health_metrics(target_ip)
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Script terminated by user.")
