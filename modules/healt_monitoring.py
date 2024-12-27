@@ -2,6 +2,7 @@ import paramiko
 import time
 from datetime import datetime
 import os
+import argparse
 
 def execute_ssh_command(ssh_client, command):
     stdin, stdout, stderr = ssh_client.exec_command(command)
@@ -53,6 +54,13 @@ def log_health_metrics(target_ip, ssh_client):
     print(log_entry)
 
 def main():
+    parser = argparse.ArgumentParser(description="SSH Host Metrics Logger")
+    parser.add_argument(
+        "username", 
+        help="Specify the SSH username for the machines."
+    )
+    args = parser.parse_args()
+
     input_file = "ip_addresses.txt"
     if not os.path.exists(input_file):
         print(f"Error: {input_file} not found.")
@@ -65,7 +73,7 @@ def main():
         print("No IP addresses found in the file.")
         return
 
-    ssh_username = "ubuntu"  
+    ssh_username = args.username  
 
     while True:
         for ip in ip_addresses:
@@ -84,8 +92,7 @@ def main():
             except Exception as e:
                 print(f"Error connecting to {ip}: {e}")
 
-            
-            time.sleep(5)  
+            time.sleep(60)  
 
 if __name__ == "__main__":
     try:
