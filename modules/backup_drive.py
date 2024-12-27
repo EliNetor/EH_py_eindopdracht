@@ -2,6 +2,7 @@ import dropbox
 import paramiko
 from io import BytesIO
 from datetime import datetime
+import argparse
 
 def read_access_token():
     token_file_path = 'token.txt'
@@ -49,7 +50,7 @@ def download_files_from_remote(remote_ip, remote_directory, ssh_username):
         
         for filename in remote_files:
             remote_file_path = remote_directory + '/' + filename  
-            print(f"accesing: {remote_file_path}")  
+            print(f"accessing: {remote_file_path}")  
             
             
             with sftp.open(remote_file_path, 'rb') as remote_file:
@@ -67,8 +68,16 @@ def download_files_from_remote(remote_ip, remote_directory, ssh_username):
 
 
 if __name__ == '__main__':
-    remote_ip = '192.168.0.195'  
+    parser = argparse.ArgumentParser(description="Backup files from a remote host to Dropbox")
+    
+    parser.add_argument('-i', '--ip', required=True, help="ip address of host")
+    
+    args = parser.parse_args()
+    
+  
+    remote_ip = args.ip 
     remote_directory = '/home/ubuntu/test'  
     ssh_username = 'ubuntu'  
 
+    
     download_files_from_remote(remote_ip, remote_directory, ssh_username)
