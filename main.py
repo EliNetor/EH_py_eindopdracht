@@ -20,6 +20,15 @@ def run_backup(ip, username, directory):
     except subprocess.CalledProcessError as e:
         print(e)
 
+def run_commands(username):
+    try:
+        subprocess.run(
+            [sys.executable, "./modules/commandos.py", "-u", username],
+            check=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(e)
+
 def main():
     parser = argparse.ArgumentParser(description="Check resource usage on hosts")
 
@@ -41,6 +50,11 @@ def main():
         "-d", "--directory",
         help="Select directory to backup"
     )
+    parser.add_argument(
+        "-c", "--commands",
+        action="store_true",
+        help="run commands on hosts from github file"
+    )
 
     args = parser.parse_args()
 
@@ -48,6 +62,8 @@ def main():
         run_metrics_logger(args.username)
     if args.backup and args.directory:
         run_backup(args.backup, args.username, args.directory)
+    if args.commands:
+        run_commands(args.username)
 
 if __name__ == "__main__":
     main()
