@@ -11,10 +11,10 @@ def run_metrics_logger(username):
     except subprocess.CalledProcessError as e:
         print(e)
 
-def run_backup(ip, username):
+def run_backup(ip, username, directory):
     try:
         subprocess.run(
-            [sys.executable, "./modules/backup_drive.py", "-i", ip, "-u", username],
+            [sys.executable, "./modules/backup_drive.py", "-i", ip, "-u", username, "-d", directory],
             check=True
         )
     except subprocess.CalledProcessError as e:
@@ -37,13 +37,17 @@ def main():
         "-b", "--backup",
         help="Backup for set host. Specify the IP address."
     )
+    parser.add_argument(
+        "-d", "--directory",
+        help="Select directory to backup"
+    )
 
     args = parser.parse_args()
 
     if args.machine_user:
         run_metrics_logger(args.username)
-    if args.backup:
-        run_backup(args.backup, args.username)
+    if args.backup and args.directory:
+        run_backup(args.backup, args.username, args.directory)
 
 if __name__ == "__main__":
     main()

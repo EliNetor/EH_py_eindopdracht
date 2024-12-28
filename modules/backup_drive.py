@@ -1,7 +1,7 @@
 import dropbox
 import paramiko
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, date
 import argparse
 
 def read_access_token():
@@ -57,7 +57,7 @@ def download_files_from_remote(remote_ip, remote_directory, ssh_username):
                 file_content = remote_file.read()  
 
                 
-                dropbox_dest_path = f'/{remote_ip}/{filename}' 
+                dropbox_dest_path = f'/{remote_ip}_{date.today()}/{filename}' 
                 upload_to_dropbox(file_content, dropbox_dest_path)
 
         
@@ -72,13 +72,13 @@ if __name__ == '__main__':
     
     parser.add_argument('-i', '--ip', required=True, help="ip address of host")
     parser.add_argument('-u', '--username', required=True, help="username of the host")
+    parser.add_argument('-d', '--directory', required=True, help="directory to copy")
     
     args = parser.parse_args()
     
   
     remote_ip = args.ip 
-    remote_directory = '/home/ubuntu/test'  
+    remote_directory = args.directory
     ssh_username = args.username 
 
-    
     download_files_from_remote(remote_ip, remote_directory, ssh_username)
