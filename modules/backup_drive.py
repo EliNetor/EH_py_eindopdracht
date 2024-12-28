@@ -71,13 +71,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Backup files from a remote host to Dropbox")
     
     parser.add_argument('-i', '--ip', required=True, help="ip address of host")
+    parser.add_argument('-u', '--username', required=True, help="username of the host")
     
     args = parser.parse_args()
     
   
     remote_ip = args.ip 
     remote_directory = '/home/ubuntu/test'  
-    ssh_username = 'ubuntu'  
+    ssh_username = args.username 
 
     
     download_files_from_remote(remote_ip, remote_directory, ssh_username)
