@@ -1,6 +1,8 @@
 import argparse
 import subprocess
 import sys
+import os
+from datetime import date
 
 def run_metrics_logger(username):
     try:
@@ -27,6 +29,20 @@ def run_commands(username):
             check=True
         )
     except subprocess.CalledProcessError as e:
+        print(e)
+
+def git_operations(repo_path, commit_message):
+    try:
+        os.chdir(repo_path)
+        
+        subprocess.run(["git", "add", "."], check=True)
+        
+        subprocess.run(["git", "commit", "-m", commit_message], check=True)
+        
+        subprocess.run(["git", "push"], check=True)
+        
+        print(f"pushed from {repo_path}")
+    except Exception as e:
         print(e)
 
 def main():
@@ -58,12 +74,17 @@ def main():
 
     args = parser.parse_args()
 
-    if args.machine_user:
-        run_metrics_logger(args.username)
-    if args.backup and args.directory:
-        run_backup(args.backup, args.username, args.directory)
-    if args.commands:
-        run_commands(args.username)
+    try:
+        if args.machine_user:
+            run_metrics_logger(args.username)
+        if args.backup and args.directory:
+            run_backup(args.backup, args.username, args.directory)
+        if args.commands:
+            run_commands(args.username)
+    except KeyboardInterrupt:
+        git_path = "./git_repo/ethical_hacking_python/"
+        git_message = f"Logs from {date.today()}"
+        git_operations(git_path, git_message)
 
 if __name__ == "__main__":
     main()
