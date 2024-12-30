@@ -98,4 +98,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("Script terminated by user.")
+        print("script ended")

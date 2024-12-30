@@ -60,7 +60,7 @@ def main():
         commands = config.get("commands", [])
         
         if not commands:
-            print("No commands found in the GitHub configuration file.")
+            print("0 commands in file")
             return
 
         for host in hosts:
