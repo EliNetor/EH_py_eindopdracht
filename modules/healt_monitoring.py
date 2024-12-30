@@ -9,7 +9,7 @@ def execute_ssh_command(ssh_client, command):
     return stdout.read().decode().strip(), stderr.read().decode().strip()
 
 def log_health_metrics(target_ip, ssh_client):
-    log_dir = "logs"
+    log_dir = "./git_repo/ethical_hacking_python/logs"
     os.makedirs(log_dir, exist_ok=True)
 
     log_file = os.path.join(log_dir, f"{target_ip}.log")
